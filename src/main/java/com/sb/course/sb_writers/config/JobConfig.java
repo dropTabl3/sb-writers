@@ -9,10 +9,13 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 
 
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -27,6 +30,7 @@ import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.Writer;
+import java.time.LocalDateTime;
 
 @Configuration
 public class JobConfig {
@@ -89,10 +93,30 @@ public class JobConfig {
             @Value("#{jobParameters['outputFile']}") FileSystemResource outputFile){
         FlatFileItemWriter<StudentJdbc> flatFileItemWriter = new FlatFileItemWriter<>();
         flatFileItemWriter.setResource(outputFile);
+
+        //header colonne
         flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback(){
             @Override
             public void writeHeader(Writer writer) throws IOException {
                 writer.write("ID,FIRST_NAME,LAST_NAME,EMAIL");
+            }
+        });
+
+        //mappatura campi modello su colonne
+        flatFileItemWriter.setLineAggregator(new DelimitedLineAggregator<StudentJdbc>(){
+            {
+                setFieldExtractor(new BeanWrapperFieldExtractor<StudentJdbc>(){
+                    {
+                        setNames(new String[]{"id","firstName","lastName","email"});
+                    }
+                });
+            }
+        });
+
+        flatFileItemWriter.setFooterCallback(new FlatFileFooterCallback() {
+            @Override
+            public void writeFooter(Writer writer) throws IOException {
+                writer.write("Created @: " + LocalDateTime.now());
             }
         });
         return flatFileItemWriter;
