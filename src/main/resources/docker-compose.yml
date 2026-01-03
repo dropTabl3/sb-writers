@@ -5,7 +5,7 @@ services:
     container_name: sb-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: sb-readers
+      MYSQL_DATABASE: spring_batch
       MYSQL_ROOT_PASSWORD: root
     ports:
       - "3306:3306"
