@@ -1,7 +1,7 @@
 package com.sb.course.sb_writers.config;
 
 import com.sb.course.sb_writers.model.*;
-import com.sb.course.sb_writers.processor.FirstChunkJobProcessor;
+import com.sb.course.sb_writers.processor.StudentProcessor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
@@ -16,6 +16,8 @@ import org.springframework.batch.item.file.FlatFileItemWriter;
 
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
+import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
+import org.springframework.batch.item.json.JsonFileItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -25,7 +27,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
-import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 import javax.sql.DataSource;
 import java.io.IOException;
@@ -42,7 +43,7 @@ public class JobConfig {
     private StepBuilderFactory stepBuilderFactory;
 
     @Autowired
-    private FirstChunkJobProcessor firstChunkJobProcessor;
+    private StudentProcessor studentProcessor;
 
     @Bean
     @Primary
@@ -68,9 +69,10 @@ public class JobConfig {
 
     public Step firstChunkStep(){
         return stepBuilderFactory.get("F_CHUNK_STEP")
-                .<StudentJdbc, StudentJdbc>chunk(3)
+                .<StudentJdbc, StudentJSON>chunk(3)
                 .reader(jdbcCursorItemReader())
-                .writer(flatFileItemWriter(null))
+                .processor(studentProcessor)
+                .writer(jsonFileItemWriter(null))
                 .build();
     }
 
@@ -85,6 +87,19 @@ public class JobConfig {
             }
         });
         return reader;
+    }
+
+
+    @StepScope
+    @Bean
+    public JsonFileItemWriter<StudentJSON> jsonFileItemWriter(
+            @Value("#{jobParameters['outputFile']}") FileSystemResource outputFile){
+        JsonFileItemWriter<StudentJSON> jsonFileItemWriter =
+                new JsonFileItemWriter<>(
+                        outputFile,
+                        new JacksonJsonObjectMarshaller<StudentJSON>()
+                );
+        return jsonFileItemWriter;
     }
 
     @StepScope
