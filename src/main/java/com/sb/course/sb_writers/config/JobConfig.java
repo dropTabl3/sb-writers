@@ -8,14 +8,20 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
+import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.FlatFileItemWriter;
 
 
+import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
+import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
+import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
 import org.springframework.batch.item.json.JsonFileItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -69,11 +75,38 @@ public class JobConfig {
 
     public Step firstChunkStep(){
         return stepBuilderFactory.get("F_CHUNK_STEP")
-                .<StudentJdbc, StudentJSON>chunk(3)
-                .reader(jdbcCursorItemReader())
-                .processor(studentProcessor)
-                .writer(jsonFileItemWriter(null))
+                .<StudentCsv, StudentCsv>chunk(3)
+                .reader(flatFileItemReader(null))
+//                .processor(studentProcessor)
+//                .writer(jsonFileItemWriter(null))
+                .writer(jdbcBatchItemWriter(null))
                 .build();
+    }
+
+    @StepScope
+    @Bean
+    public FlatFileItemReader<StudentCsv> flatFileItemReader(
+            @Value("#{jobParameters['inputFile']}") FileSystemResource inputFilePath
+    ){
+        FlatFileItemReader<StudentCsv> reader = new FlatFileItemReader<>();
+        reader.setResource(inputFilePath);
+        reader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
+            {
+                setLineTokenizer(new DelimitedLineTokenizer(){
+                    {
+                        setNames("ID", "First Name", "Last Name", "Email");
+                    }
+                });
+
+                setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>(){
+                    {
+                        setTargetType(StudentCsv.class);
+                    }
+                });
+            }
+        });
+        reader.setLinesToSkip(1); //skip header
+        return reader;
     }
 
     public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader(){
@@ -87,6 +120,21 @@ public class JobConfig {
             }
         });
         return reader;
+    }
+
+    @StepScope
+    @Bean
+    public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter(
+            @Value("#{jobParameters['outputFile']}") FileSystemResource outputFile){
+        JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = new JdbcBatchItemWriter<>();
+        jdbcBatchItemWriter.setDataSource(universityDataSource());
+        jdbcBatchItemWriter.setSql(
+                "INSERT INTO STUDENT(id, first_name, last_name, email) " +
+                "VALUES (:id, :firstName, :lastName, :email)"
+        );
+        //serve a dire a spring che usiamo i nomi delle proprietà del bean StudentCsv per mappare i parametri SQL
+        jdbcBatchItemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<StudentCsv>());
+        return jdbcBatchItemWriter;
     }
 
 
