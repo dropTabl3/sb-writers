@@ -9,6 +9,7 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
@@ -37,6 +38,8 @@ import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.Writer;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 
 @Configuration
@@ -79,7 +82,8 @@ public class JobConfig {
                 .reader(flatFileItemReader(null))
 //                .processor(studentProcessor)
 //                .writer(jsonFileItemWriter(null))
-                .writer(jdbcBatchItemWriter(null))
+//                .writer(jdbcBatchItemWriter(null))
+                .writer(jdbcBatchItemWriterPrepState())
                 .build();
     }
 
@@ -134,6 +138,25 @@ public class JobConfig {
         );
         //serve a dire a spring che usiamo i nomi delle proprietà del bean StudentCsv per mappare i parametri SQL
         jdbcBatchItemWriter.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<StudentCsv>());
+        return jdbcBatchItemWriter;
+    }
+    @Bean
+    public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriterPrepState(){
+        JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = new JdbcBatchItemWriter<>();
+        jdbcBatchItemWriter.setDataSource(universityDataSource());
+        jdbcBatchItemWriter.setSql(
+                "INSERT INTO STUDENT(id, first_name, last_name, email) " +
+                        "VALUES (?, ?, ?, ?)"
+        );
+        jdbcBatchItemWriter.setItemPreparedStatementSetter(new ItemPreparedStatementSetter<StudentCsv>() {
+            @Override
+            public void setValues(StudentCsv studentCsv, PreparedStatement preparedStatement) throws SQLException {
+                preparedStatement.setLong(1, studentCsv.getId());
+                preparedStatement.setString(2, studentCsv.getFirstName());
+                preparedStatement.setString(3, studentCsv.getLastName());
+                preparedStatement.setString(4, studentCsv.getEmail());
+            }
+        });
         return jdbcBatchItemWriter;
     }
 
