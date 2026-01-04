@@ -13,6 +13,7 @@ import org.springframework.context.annotation.ComponentScan;
         "com.sb.course.sb_writers.reader",
         "com.sb.course.sb_writers.processor",
         "com.sb.course.sb_writers.writer",
+        "com.sb.course.sb_writers.listener"
 })
 public class SbWritersApplication {
 

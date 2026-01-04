@@ -1,5 +1,6 @@
 package com.sb.course.sb_writers.config;
 
+import com.sb.course.sb_writers.listener.SkipListenerImpl;
 import com.sb.course.sb_writers.model.*;
 import com.sb.course.sb_writers.processor.StudentProcessor;
 import org.springframework.batch.core.Job;
@@ -54,6 +55,9 @@ public class JobConfig {
     @Autowired
     private StudentProcessor studentProcessor;
 
+    @Autowired
+    private SkipListenerImpl skipListenerImpl;
+
     @Bean
     @Primary
     @ConfigurationProperties(prefix = "spring.datasource")
@@ -78,12 +82,18 @@ public class JobConfig {
 
     public Step firstChunkStep(){
         return stepBuilderFactory.get("F_CHUNK_STEP")
-                .<StudentCsv, StudentCsv>chunk(3)
+                .<StudentCsv, StudentJSON>chunk(3)
                 .reader(flatFileItemReader(null))
-//                .processor(studentProcessor)
-//                .writer(jsonFileItemWriter(null))
+                .processor(studentProcessor)
+                .writer(jsonFileItemWriter(null))
+                .faultTolerant()
+                .skip(Throwable.class)
+                .skipLimit(100)
+//                .retryLimit(3)
+//                .retry(Throwable.class)
+                .listener(skipListenerImpl)
 //                .writer(jdbcBatchItemWriter(null))
-                .writer(jdbcBatchItemWriterPrepState())
+//                .writer(jdbcBatchItemWriterPrepState())
                 .build();
     }
 
