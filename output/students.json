@@ -1,0 +1,12 @@
+[
+ {"id":1,"firstName":"John","lastName":"Doe","email":"johndoe@gmail.com"},
+ {"id":2,"firstName":"Jane","lastName":"Smith","email":"janesmith@gmail.com"},
+ {"id":4,"firstName":"Bob","lastName":"Brown","email":"bobbrown@gmail.com"},
+ {"id":5,"firstName":"Carlos","lastName":"García","email":"carlos.garcia@example.com"},
+ {"id":7,"firstName":"Liam","lastName":"O'Connor","email":"liam.oconnor@example.ie"},
+ {"id":8,"firstName":"Chen","lastName":"Wei","email":"chen.wei@example.cn"},
+ {"id":9,"firstName":"Emma","lastName":"Müller","email":"emma.mueller@example.de"},
+ {"id":10,"firstName":"No Email","lastName":"User","email":""},
+ {"id":11,"firstName":"Zoë","lastName":"François","email":"zoe.francois@example.fr"},
+ {"id":12,"firstName":"Sam","lastName":"Patel","email":"sam.patel@example.co.uk"}
+]
